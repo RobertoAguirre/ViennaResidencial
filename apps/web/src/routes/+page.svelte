@@ -43,6 +43,15 @@
 
 	<section class="tarjeta">
 		<h2 class="text-xl font-semibold">Entrar</h2>
+		{#if data.aviso}
+			<p class="mt-3 text-sm font-semibold text-rose-800">{data.aviso}</p>
+		{/if}
+		{#if data.google}
+			<form method="POST" action="/auth/google" class="mt-4">
+				<button class="btn w-full" type="submit">Continuar con Google</button>
+			</form>
+		{/if}
+		{#if !data.google || data.demo}
 		<form method="POST" class="mt-4 space-y-3" use:enhance>
 			<label class="block">
 				<span class="mb-1 block text-sm font-semibold">Correo</span>
@@ -57,6 +66,7 @@
 			{/if}
 			<button class="btn w-full" type="submit">Entrar</button>
 		</form>
+		{/if}
 
 		{#if data.demo}
 			<div class="mt-6 border-t border-linea pt-5">

@@ -5,10 +5,6 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	ssr: {
-		noExternal: ['@vienna/db'],
-		external: ['@electric-sql/pglite', 'postgres']
-	},
-	optimizeDeps: {
-		exclude: ['@electric-sql/pglite']
+		noExternal: ['@vienna/db']
 	}
 });

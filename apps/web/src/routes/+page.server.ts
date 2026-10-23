@@ -3,9 +3,14 @@ import { crearSesion, listarCuentasDemo, membresiasDe, validarCredenciales } fro
 import { COOKIE, opcionesCookie } from '$lib/server/sesion';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.usuario) redirect(303, '/panel');
-	return { demo: await listarCuentasDemo() };
+	if (locals.cuentaSinFraccionamiento) redirect(303, '/sin-acceso');
+	return {
+		demo: await listarCuentasDemo(),
+		google: Boolean(locals.supabase),
+		aviso: url.searchParams.get('aviso')
+	};
 };
 
 export const actions: Actions = {

@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 declare global {
 	namespace App {
 		interface Locals {
@@ -12,6 +14,9 @@ declare global {
 				estado: string;
 				roles: Array<'administracion' | 'comite' | 'dueno' | 'habitante'>;
 			}>;
+			supabase: SupabaseClient | null;
+			correoGoogle: string | null;
+			cuentaSinFraccionamiento: boolean;
 		}
 	}
 }

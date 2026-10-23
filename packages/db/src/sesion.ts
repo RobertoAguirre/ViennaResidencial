@@ -16,7 +16,7 @@ export async function validarCredenciales(correo: string, contrasena: string) {
 		.where(eq(usuarios.correo, correo.trim().toLowerCase()))
 		.limit(1);
 	const usuario = filasUsuario[0];
-	if (!usuario) return null;
+	if (!usuario?.hashContrasena) return null;
 	const valida = await verificarContrasena(contrasena, usuario.hashContrasena);
 	if (!valida) return null;
 	return { id: usuario.id, nombre: usuario.nombre, correo: usuario.correo };
@@ -169,4 +169,31 @@ export async function listarCuentasDemo() {
 	const destacadas = DESTACADAS.map((id) => todas.find((cuenta) => cuenta.id === id)).filter((cuenta) => cuenta != null);
 	const otras = todas.filter((cuenta) => !DESTACADAS.includes(cuenta.id)).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 	return { password: PASSWORD_DEMO, destacadas, otras };
+}
+
+export async function vincularUsuarioGoogle(datos: { supabaseId: string; correo: string; nombre: string }) {
+	const db = await getDb();
+	const correo = datos.correo.trim().toLowerCase();
+	const nombre = datos.nombre.trim() || 'Vecino';
+
+	const porIdentidad = await db.select().from(usuarios).where(eq(usuarios.supabaseId, datos.supabaseId)).limit(1);
+	if (porIdentidad[0]) {
+		return { id: porIdentidad[0].id, nombre: porIdentidad[0].nombre, correo: porIdentidad[0].correo };
+	}
+
+	const porCorreo = await db.select().from(usuarios).where(eq(usuarios.correo, correo)).limit(1);
+	if (porCorreo[0]) {
+		await db.update(usuarios).set({ supabaseId: datos.supabaseId }).where(eq(usuarios.id, porCorreo[0].id));
+		return { id: porCorreo[0].id, nombre: porCorreo[0].nombre, correo: porCorreo[0].correo };
+	}
+
+	await db.insert(usuarios).values({
+		id: datos.supabaseId,
+		nombre,
+		correo,
+		telefono: null,
+		hashContrasena: null,
+		supabaseId: datos.supabaseId
+	});
+	return { id: datos.supabaseId, nombre, correo };
 }

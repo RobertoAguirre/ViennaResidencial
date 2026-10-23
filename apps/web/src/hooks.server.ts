@@ -1,26 +1,93 @@
-import { leerSesion } from '@vienna/db';
-import type { Handle } from '@sveltejs/kit';
-import { COOKIE } from '$lib/server/sesion';
+import { cerrarSesion, crearSesion, leerSesion, membresiasDe, vincularUsuarioGoogle } from '@vienna/db';
+import type { Handle, RequestEvent } from '@sveltejs/kit';
+import { COOKIE, opcionesCookie } from '$lib/server/sesion';
+import { crearClienteSupabase } from '$lib/server/supabase';
 
-export const handle: Handle = async ({ event, resolve }) => {
-	event.locals.token = event.cookies.get(COOKIE) ?? null;
+function vaciar(event: RequestEvent) {
+	event.locals.token = null;
 	event.locals.usuario = null;
 	event.locals.fraccionamiento = null;
 	event.locals.roles = [];
 	event.locals.membresias = [];
+	event.locals.supabase = null;
+	event.locals.correoGoogle = null;
+	event.locals.cuentaSinFraccionamiento = false;
+}
 
-	if (event.locals.token) {
-		const sesion = await leerSesion(event.locals.token);
-		if (sesion) {
-			event.locals.usuario = sesion.usuario;
-			event.locals.fraccionamiento = sesion.fraccionamiento;
-			event.locals.roles = sesion.roles;
-			event.locals.membresias = sesion.membresias;
-		} else {
-			event.cookies.delete(COOKIE, { path: '/' });
-			event.locals.token = null;
-		}
+function asignar(event: RequestEvent, sesion: NonNullable<Awaited<ReturnType<typeof leerSesion>>>) {
+	event.locals.usuario = sesion.usuario;
+	event.locals.fraccionamiento = sesion.fraccionamiento;
+	event.locals.roles = sesion.roles;
+	event.locals.membresias = sesion.membresias;
+	event.locals.cuentaSinFraccionamiento = false;
+}
+
+async function olvidarCookie(event: RequestEvent) {
+	if (!event.locals.token) return;
+	await cerrarSesion(event.locals.token);
+	event.cookies.delete(COOKIE, { path: '/' });
+	event.locals.token = null;
+}
+
+async function entrarConCookie(event: RequestEvent) {
+	if (!event.locals.token) return;
+	const sesion = await leerSesion(event.locals.token);
+	if (!sesion) {
+		event.cookies.delete(COOKIE, { path: '/' });
+		event.locals.token = null;
+		return;
 	}
+	asignar(event, sesion);
+}
+
+async function entrarConGoogle(event: RequestEvent) {
+	const supabase = event.locals.supabase;
+	if (!supabase) return;
+	const { data } = await supabase.auth.getUser();
+	const authUser = data.user;
+	if (!authUser?.email) {
+		await olvidarCookie(event);
+		return;
+	}
+
+	const nombre = String(authUser.user_metadata?.full_name ?? authUser.user_metadata?.name ?? 'Vecino');
+	const vinculado = await vincularUsuarioGoogle({
+		supabaseId: authUser.id,
+		correo: authUser.email,
+		nombre
+	});
+	event.locals.correoGoogle = vinculado.correo;
+
+	const sesion = event.locals.token ? await leerSesion(event.locals.token) : null;
+	if (sesion?.usuario.id === vinculado.id) {
+		asignar(event, sesion);
+		return;
+	}
+
+	await olvidarCookie(event);
+	const membresias = await membresiasDe(vinculado.id);
+	if (membresias.length === 0) {
+		event.locals.cuentaSinFraccionamiento = true;
+		return;
+	}
+
+	const token = await crearSesion(vinculado.id, membresias[0].fraccionamientoId);
+	event.cookies.set(COOKIE, token, opcionesCookie(event.url));
+	event.locals.token = token;
+	const nueva = await leerSesion(token);
+	if (nueva) asignar(event, nueva);
+}
+
+export const handle: Handle = async ({ event, resolve }) => {
+	vaciar(event);
+	const ruta = event.url.pathname;
+	if (ruta.startsWith('/_app/') || ruta.includes('.')) return resolve(event);
+
+	event.locals.token = event.cookies.get(COOKIE) ?? null;
+	event.locals.supabase = crearClienteSupabase(event);
+
+	if (event.locals.supabase) await entrarConGoogle(event);
+	else await entrarConCookie(event);
 
 	return resolve(event);
 };

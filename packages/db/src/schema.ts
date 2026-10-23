@@ -13,7 +13,8 @@ export const usuarios = pgTable('usuarios', {
 	nombre: text('nombre').notNull(),
 	correo: text('correo').notNull().unique(),
 	telefono: text('telefono'),
-	hashContrasena: text('hash_contrasena').notNull(),
+	hashContrasena: text('hash_contrasena'),
+	supabaseId: text('supabase_id').unique(),
 	creadoEn: timestamp('creado_en', { withTimezone: true }).notNull().defaultNow()
 });
 

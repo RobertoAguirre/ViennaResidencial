@@ -6,34 +6,52 @@ Una persona puede rentar una casa sin ser dueña. El dueño tiene su propia cuen
 
 ## Por qué Postgres
 
-Dueño, habitante, vivienda e incidencia son relaciones. La reincidencia es un conteo por persona y por casa, en 90 días y en un año. Postgres lo resuelve sin armar el vínculo a mano. En producción la base es [Supabase](https://supabase.com). En esta máquina, si no hay `DATABASE_URL`, corre el mismo SQL en Postgres embebido (PGlite) y los datos quedan en `data/`.
+Dueño, habitante, vivienda e incidencia son relaciones. La reincidencia es un conteo por persona y por casa, en 90 días y en un año. Postgres lo resuelve sin armar el vínculo a mano. Esta Mac y Vercel usan la misma base en [Supabase](https://supabase.com).
 
 ## Arrancar
+
+Copia la URI del pooler a `apps/web/.env` (`DATABASE_URL`) y ejecuta `supabase/schema.sql` en el editor SQL. Después:
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Abre http://localhost:5173. La contraseña de las cuentas de demostración es `Demo-2026`.
+Abre http://localhost:5173.
 
-Para empezar, entra como Elena Vargas (administra Los Encinos y Bugambilias), Mariana Solís (dueña que no vive en Encino 12) y Diego Herrera (quien renta esa casa).
-
-Para vaciar la base local: detén el servidor y borra la carpeta `data`.
+`VIENNA_SEED=1` carga las cuentas de demostración solo si el proyecto está vacío. La contraseña es `Demo-2026`. Para verlas en la pantalla de entrada también hace falta `VIENNA_DEMO=1`. Quítalas cuando ya haya vecinos reales. Elena Vargas administra Los Encinos y Bugambilias; Mariana Solís es dueña de Encino 12 y no vive ahí; Diego Herrera renta esa casa.
 
 ## Supabase
 
 1. Crea un proyecto.
-2. En el editor SQL, ejecuta el contenido de `schemaSql` en `packages/db/src/sql.ts`.
-3. En `apps/web/.env` pon la URI del pooler (puerto 6543):
+2. En el editor SQL, ejecuta `supabase/schema.sql` completo.
+3. En Authentication → Providers → Google, actívalo. Ahí van el Client ID y el Client Secret de Google Cloud (pantalla de consentimiento externa, y el redirect `https://<ref>.supabase.co/auth/v1/callback`).
+4. En Authentication → URL configuration, agrega:
+   - `http://localhost:5173/auth/callback`
+   - `https://<tu-app>.vercel.app/auth/callback`
+5. En `apps/web/.env`:
 
 ```
-DATABASE_URL=postgresql://...
-VIENNA_SEED=1
-VIENNA_DEMO=1
+DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres
+PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=<anon o publishable>
 ```
 
-`VIENNA_SEED=1` carga los datos de demostración solo si el proyecto está vacío. Quítalo cuando ya haya datos reales. El navegador no se conecta a Supabase: el servidor de SvelteKit filtra cada consulta por el fraccionamiento de la sesión.
+Usa la URI del pooler en modo transacción (puerto 6543).
+
+El navegador solo habla con Supabase para entrar con Google. Las consultas de incidencias las hace el servidor con `DATABASE_URL`, filtrando por el fraccionamiento de la sesión. El SQL cierra el acceso de la llave anónima a las tablas.
+
+Quien entre con Google y no tenga una membresía con ese correo ve una página de espera. Administración lo da de alta en `usuarios` y `membresias` usando ese mismo correo.
+
+## Vercel
+
+El build ya usa `@sveltejs/adapter-vercel`.
+
+1. Importa el repositorio.
+2. Root Directory: `apps/web`.
+3. Activa «Include source files outside of the Root Directory», porque el código de la base vive en `packages/db`.
+4. Variables de entorno: `DATABASE_URL`, `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`.
+5. Agrega la URL de producción en las redirecciones de Supabase, como arriba.
 
 ## Qué ve cada cuenta
 

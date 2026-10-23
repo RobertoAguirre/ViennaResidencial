@@ -26,6 +26,7 @@ export {
 	leerSesion,
 	listarCuentasDemo,
 	membresiasDe,
-	validarCredenciales
+	validarCredenciales,
+	vincularUsuarioGoogle
 } from './sesion';
 export { clasificarReincidencia, esAdmin, esComite, hoyMexico, type Rol } from './tipos';

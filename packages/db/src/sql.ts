@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   nombre text NOT NULL,
   correo text NOT NULL UNIQUE,
   telefono text,
-  hash_contrasena text NOT NULL,
+  hash_contrasena text,
+  supabase_id text,
   creado_en timestamptz NOT NULL DEFAULT now()
 );
 
@@ -107,4 +108,8 @@ CREATE TABLE IF NOT EXISTS pagos (
 CREATE INDEX IF NOT EXISTS incidencias_fra_idx ON incidencias (fraccionamiento_id, ocurrio_en);
 CREATE INDEX IF NOT EXISTS sucesos_incidencia_idx ON sucesos (incidencia_id);
 CREATE INDEX IF NOT EXISTS cuotas_fra_idx ON cuotas (fraccionamiento_id, periodo);
+
+ALTER TABLE usuarios ALTER COLUMN hash_contrasena DROP NOT NULL;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS supabase_id text;
+CREATE UNIQUE INDEX IF NOT EXISTS usuarios_supabase_id_idx ON usuarios (supabase_id);
 `;

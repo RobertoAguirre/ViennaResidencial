@@ -6,10 +6,9 @@
   "scripts": {
     "dev": "pnpm --filter @vienna/web dev",
     "build": "pnpm --filter @vienna/web build",
-    "start": "pnpm --filter @vienna/web start",
     "check": "pnpm --filter @vienna/web check"
   },
-	"engines": {
-		"node": ">=22"
-	}
+  "engines": {
+    "node": ">=22"
+  }
 }
